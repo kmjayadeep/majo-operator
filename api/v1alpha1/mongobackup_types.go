@@ -42,7 +42,7 @@ type MongoBackupSpec struct {
 	RcloneConfig string `json:"rcloneConfig"`
 
 	// Destination to save the backup
-	Destination BackupDestination `json:"destination,inline"`
+	Destination BackupDestination `json:"destination"`
 }
 
 // MongoBackupStatus defines the observed state of MongoBackup
@@ -53,6 +53,11 @@ type MongoBackupStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.host`
+//+kubebuilder:printcolumn:name="Database",type=string,JSONPath=`.spec.database`
+//+kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.schedule`
+//+kubebuilder:printcolumn:name="Destination",type=string,JSONPath=`.spec.destination.path`
+//+kubebuilder:printcolumn:name="LastRun",type=string,JSONPath=`.status.lastRun`
 
 // MongoBackup is the Schema for the mongobackups API
 type MongoBackup struct {

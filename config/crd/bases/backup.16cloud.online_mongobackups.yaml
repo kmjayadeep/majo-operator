@@ -16,7 +16,23 @@ spec:
     singular: mongobackup
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.host
+      name: Host
+      type: string
+    - jsonPath: .spec.database
+      name: Database
+      type: string
+    - jsonPath: .spec.schedule
+      name: Schedule
+      type: string
+    - jsonPath: .spec.destination.path
+      name: Destination
+      type: string
+    - jsonPath: .status.lastRun
+      name: LastRun
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: MongoBackup is the Schema for the mongobackups API
@@ -39,11 +55,17 @@ spec:
               database:
                 description: Mongodb database to take backup from
                 type: string
+              destination:
+                description: Destination to save the backup
+                properties:
+                  path:
+                    description: Destination folder to save the backup
+                    type: string
+                required:
+                - path
+                type: object
               host:
                 description: Mongodb Host to connect to
-                type: string
-              path:
-                description: Destination folder to save the backup
                 type: string
               rcloneConfig:
                 description: Rclone configuration to save the backup
@@ -53,8 +75,8 @@ spec:
                 type: string
             required:
             - database
+            - destination
             - host
-            - path
             - rcloneConfig
             - schedule
             type: object
