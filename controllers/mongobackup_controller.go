@@ -19,6 +19,11 @@ package controllers
 import (
 	"context"
 
+	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,20 +41,33 @@ type MongoBackupReconciler struct {
 //+kubebuilder:rbac:groups=backup.16cloud.online,resources=mongobackups,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=backup.16cloud.online,resources=mongobackups/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=backup.16cloud.online,resources=mongobackups/finalizers,verbs=update
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the MongoBackup object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *MongoBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
-	// your logic here
+	mb := &backupv1alpha1.MongoBackup{}
+	err := r.Get(ctx, req.NamespacedName, mb)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Return and don't requeue
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		logger.Error(err, "Error reading object")
+		return ctrl.Result{}, err
+	}
+
+	cron := &batchv1beta1.CronJob{}
+	err = r.Get(ctx, req.NamespacedName, cron)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Error(err, "Backup job doesn't exist, creating")
+			cron = r.cronJobForMongoBackup(mb)
+		}
+		// Error reading the object - requeue the request.
+		logger.Error(err, "Error reading cronjob, requeuing")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -59,4 +77,76 @@ func (r *MongoBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupv1alpha1.MongoBackup{}).
 		Complete(r)
+}
+
+func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBackup) *batchv1beta1.CronJob {
+
+	var hLimit int32 = 1
+
+	cron := &batchv1beta1.CronJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      mb.Name,
+			Namespace: mb.Namespace,
+		},
+		Spec: batchv1beta1.CronJobSpec{
+			Schedule:                   mb.Spec.Schedule,
+			SuccessfulJobsHistoryLimit: &hLimit,
+			FailedJobsHistoryLimit:     &hLimit,
+			ConcurrencyPolicy:          batchv1beta1.ForbidConcurrent,
+			JobTemplate: batchv1beta1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							RestartPolicy: corev1.RestartPolicyOnFailure,
+							Volumes: []corev1.Volume{
+								{
+									Name: "temp-volume",
+									VolumeSource: corev1.VolumeSource{
+										EmptyDir: &corev1.EmptyDirVolumeSource{},
+									},
+								},
+								{
+									Name: "rclone-config",
+									VolumeSource: corev1.VolumeSource{
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: mb.Name,
+										},
+									},
+								},
+							},
+              InitContainers: []corev1.Container{{
+
+              }},
+							Containers: []corev1.Container{{
+								Name:  "backup",
+								Image: "rclone/rclone:1",
+								Command: []string{
+									"rclone",
+									"--config",
+									"/config/rclone.conf",
+									"copy",
+									"/mongodump",
+									"{{ .Values.backup.mongodb.bucket }}",
+									"-P",
+									"-v",
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										MountPath: "/mongodump",
+										Name:      "temp-volume",
+									},
+									{
+										MountPath: "/config",
+										Name:      "rclone-config",
+									},
+								},
+							}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return cron
 }
