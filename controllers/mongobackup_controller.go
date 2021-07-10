@@ -114,11 +114,37 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 									},
 								},
 							},
-              InitContainers: []corev1.Container{{
-
-              }},
-							Containers: []corev1.Container{{
+							InitContainers: []corev1.Container{{
 								Name:  "backup",
+								Image: "istepanov/mongodump:4.4",
+								Command: []string{
+									"/bin/sh",
+									"-c",
+
+									"echo \"running a script\"" +
+										"DIR=`date +\"%Y-%m-%d_%T\"`" +
+										"DEST=/mongodump/$DIR" +
+										"mongodump -h $DB_HOST -d $DB_NAME -o $DEST --gzip || { echo 'mongo backup failed' ; exit 1; }",
+								},
+								Env: []corev1.EnvVar{
+									{
+										Name:  "DB_NAME",
+										Value: mb.Spec.Database,
+									},
+									{
+										Name:  "DB_HOST",
+										Value: mb.Spec.Host,
+									},
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										MountPath: "/mongodump",
+										Name:      "temp-volume",
+									},
+								},
+							}},
+							Containers: []corev1.Container{{
+								Name:  "upload",
 								Image: "rclone/rclone:1",
 								Command: []string{
 									"rclone",
@@ -126,7 +152,7 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 									"/config/rclone.conf",
 									"copy",
 									"/mongodump",
-									"{{ .Values.backup.mongodb.bucket }}",
+									mb.Spec.Destination.Path,
 									"-P",
 									"-v",
 								},
