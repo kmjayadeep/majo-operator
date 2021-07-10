@@ -61,8 +61,14 @@ func (r *MongoBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	err = r.Get(ctx, req.NamespacedName, cron)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Error(err, "Backup job doesn't exist, creating")
+			logger.Info("Backup job doesn't exist, creating")
 			cron = r.cronJobForMongoBackup(mb)
+			if err := r.Create(ctx, cron); err != nil {
+				logger.Error(err, "Unable to create cronjob")
+				return ctrl.Result{}, err
+			}
+			logger.Info("Cronjob created successfully!")
+			return ctrl.Result{Requeue: true}, nil
 		}
 		// Error reading the object - requeue the request.
 		logger.Error(err, "Error reading cronjob, requeuing")
@@ -173,6 +179,9 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 			},
 		},
 	}
+
+	// Set MongoBackup as owner
+	ctrl.SetControllerReference(mb, cron, r.Scheme)
 
 	return cron
 }
