@@ -1,0 +1,34 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - backup.16cloud.online
+  resources:
+  - mongobackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - backup.16cloud.online
+  resources:
+  - mongobackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - backup.16cloud.online
+  resources:
+  - mongobackups/status
+  verbs:
+  - get
+  - patch
+  - update

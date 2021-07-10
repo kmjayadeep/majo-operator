@@ -20,22 +20,35 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// BackupDestination defines the Destination to store backups
+type BackupDestination struct {
+	// Destination folder to save the backup
+	Path string `json:"path"`
+}
 
 // MongoBackupSpec defines the desired state of MongoBackup
 type MongoBackupSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of MongoBackup. Edit mongobackup_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Mongodb Host to connect to
+	Host string `json:"host"`
+
+	// Mongodb database to take backup from
+	Database string `json:"database"`
+
+	// The schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.
+	Schedule string `json:"schedule"`
+
+	// Rclone configuration to save the backup
+	RcloneConfig string `json:"rcloneConfig"`
+
+	// Destination to save the backup
+	Destination BackupDestination `json:"destination,inline"`
 }
 
 // MongoBackupStatus defines the observed state of MongoBackup
 type MongoBackupStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Information when the last time the backup job was done
+	LastRun *metav1.Time `json:"lastRun,omitempty"`
 }
 
 //+kubebuilder:object:root=true
