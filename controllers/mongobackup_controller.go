@@ -57,6 +57,24 @@ func (r *MongoBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	se := &corev1.Secret{}
+	err = r.Get(ctx, req.NamespacedName, se)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("Secret doesn't exist, creating")
+			se = r.secretForMongoBackup(mb)
+			if err := r.Create(ctx, se); err != nil {
+				logger.Error(err, "Unable to create secret")
+				return ctrl.Result{}, err
+			}
+			logger.Info("secret created successfully!")
+			return ctrl.Result{Requeue: true}, nil
+		}
+		// Error reading the object - requeue the request.
+		logger.Error(err, "Error reading secret, requeuing")
+		return ctrl.Result{}, err
+	}
+
 	cron := &batchv1beta1.CronJob{}
 	err = r.Get(ctx, req.NamespacedName, cron)
 	if err != nil {
@@ -83,6 +101,21 @@ func (r *MongoBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupv1alpha1.MongoBackup{}).
 		Complete(r)
+}
+
+func (r *MongoBackupReconciler) secretForMongoBackup(mb *backupv1alpha1.MongoBackup) *corev1.Secret {
+	se := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      mb.Name,
+			Namespace: mb.Namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"rclone.conf": []byte(mb.Spec.RcloneConfig),
+		},
+	}
+
+	return se
 }
 
 func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBackup) *batchv1beta1.CronJob {
