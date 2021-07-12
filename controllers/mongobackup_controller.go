@@ -176,9 +176,9 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 									"/bin/sh",
 									"-c",
 
-									"echo \"running a script\"" +
-										"DIR=`date +\"%Y-%m-%d_%T\"`" +
-										"DEST=/mongodump/$DIR" +
+									"echo \"running a script\";" +
+										"DIR=`date +\"%Y-%m-%d_%T\"`;" +
+										"DEST=/mongodump/$DIR;" +
 										"mongodump -h $DB_HOST -d $DB_NAME -o $DEST --gzip || { echo 'mongo backup failed' ; exit 1; }",
 								},
 								Env: []corev1.EnvVar{
