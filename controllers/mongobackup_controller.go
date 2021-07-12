@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/base64"
 
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -62,7 +63,13 @@ func (r *MongoBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			logger.Info("Secret doesn't exist, creating")
-			se = r.secretForMongoBackup(mb)
+			se, err = r.secretForMongoBackup(mb)
+
+			if err != nil {
+				logger.Error(err, "Unable to create secret, unrecoverable error")
+				return ctrl.Result{}, nil
+			}
+
 			if err := r.Create(ctx, se); err != nil {
 				logger.Error(err, "Unable to create secret")
 				return ctrl.Result{}, err
@@ -103,7 +110,13 @@ func (r *MongoBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *MongoBackupReconciler) secretForMongoBackup(mb *backupv1alpha1.MongoBackup) *corev1.Secret {
+func (r *MongoBackupReconciler) secretForMongoBackup(mb *backupv1alpha1.MongoBackup) (*corev1.Secret, error) {
+	conf, err := base64.RawStdEncoding.DecodeString(mb.Spec.RcloneConfig)
+
+	if err != nil {
+		return nil, err
+	}
+
 	se := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      mb.Name,
@@ -111,11 +124,14 @@ func (r *MongoBackupReconciler) secretForMongoBackup(mb *backupv1alpha1.MongoBac
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"rclone.conf": []byte(mb.Spec.RcloneConfig),
+			"rclone.conf": conf,
 		},
 	}
 
-	return se
+	// Set MongoBackup as owner for secret
+	ctrl.SetControllerReference(mb, se, r.Scheme)
+
+	return se, nil
 }
 
 func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBackup) *batchv1beta1.CronJob {
