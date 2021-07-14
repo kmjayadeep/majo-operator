@@ -111,7 +111,7 @@ func (r *MongoBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *MongoBackupReconciler) secretForMongoBackup(mb *backupv1alpha1.MongoBackup) (*corev1.Secret, error) {
-	conf, err := base64.RawStdEncoding.DecodeString(mb.Spec.RcloneConfig)
+	conf, err := base64.RawStdEncoding.DecodeString(mb.Spec.RcloneDestination.RcloneConfig)
 
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 									"/config/rclone.conf",
 									"copy",
 									"/mongodump",
-									mb.Spec.Destination.Path,
+									mb.Spec.RcloneDestination.Path,
 									"-P",
 									"-v",
 								},

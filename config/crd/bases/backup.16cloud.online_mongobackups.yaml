@@ -55,29 +55,45 @@ spec:
               database:
                 description: Mongodb database to take backup from
                 type: string
-              destination:
-                description: Destination to save the backup
+              host:
+                description: Mongodb Host to connect to
+                type: string
+              rcloneDestination:
+                description: RcloneDestination
                 properties:
                   path:
                     description: Destination folder to save the backup
                     type: string
+                  rcloneConfig:
+                    description: Rclone configuration to save the backup
+                    type: string
                 required:
                 - path
+                - rcloneConfig
                 type: object
-              host:
-                description: Mongodb Host to connect to
-                type: string
-              rcloneConfig:
-                description: Rclone configuration to save the backup
-                type: string
+              s3Destination:
+                description: Destination to save the backup
+                properties:
+                  accesKeyId:
+                    description: Acces Key ID
+                    type: string
+                  bucket:
+                    description: Destination bucket to save the backup
+                    type: string
+                  secretAccessKey:
+                    description: SecretAccessKey to access s3
+                    type: string
+                required:
+                - accesKeyId
+                - bucket
+                - secretAccessKey
+                type: object
               schedule:
                 description: The schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.
                 type: string
             required:
             - database
-            - destination
             - host
-            - rcloneConfig
             - schedule
             type: object
           status:

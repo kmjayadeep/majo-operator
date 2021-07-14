@@ -20,10 +20,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// BackupDestination defines the Destination to store backups
-type BackupDestination struct {
+// RcloneDestination defines the Destination to store backups
+type RcloneDestination struct {
+	// Rclone configuration to save the backup
+	RcloneConfig string `json:"rcloneConfig"`
+
 	// Destination folder to save the backup
 	Path string `json:"path"`
+}
+
+type S3Destination struct {
+	// Acces Key ID
+	AccessKeyID string `json:"accesKeyId"`
+	// SecretAccessKey to access s3
+	SecretAccessKey string `json:"secretAccessKey"`
+	// Destination bucket to save the backup
+	Bucket string `json:"bucket"`
 }
 
 // MongoBackupSpec defines the desired state of MongoBackup
@@ -38,11 +50,11 @@ type MongoBackupSpec struct {
 	// The schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.
 	Schedule string `json:"schedule"`
 
-	// Rclone configuration to save the backup
-	RcloneConfig string `json:"rcloneConfig"`
+	// RcloneDestination
+	RcloneDestination *RcloneDestination `json:"rcloneDestination,omitempty"`
 
 	// Destination to save the backup
-	Destination BackupDestination `json:"destination"`
+	S3Destination *S3Destination `json:"s3Destination,omitempty"`
 }
 
 // MongoBackupStatus defines the observed state of MongoBackup
