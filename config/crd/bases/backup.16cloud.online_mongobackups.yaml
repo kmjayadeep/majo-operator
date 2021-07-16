@@ -80,12 +80,16 @@ spec:
                   bucket:
                     description: Destination bucket to save the backup
                     type: string
+                  endpoint:
+                    description: Endpoint is the s3 endpoint to connect to
+                    type: string
                   secretAccessKey:
                     description: SecretAccessKey to access s3
                     type: string
                 required:
                 - accessKeyId
                 - bucket
+                - endpoint
                 - secretAccessKey
                 type: object
               schedule:

@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
@@ -56,6 +57,12 @@ func (r *MongoBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// Error reading the object - requeue the request.
 		logger.Error(err, "Error reading object")
 		return ctrl.Result{}, err
+	}
+
+	// validation
+	if mb.Spec.RcloneDestination == nil && mb.Spec.S3Destination == nil {
+		logger.Info("Neither rclone or s3 destination is provided, cannot continue")
+		return ctrl.Result{}, nil
 	}
 
 	se := &corev1.Secret{}
@@ -111,10 +118,19 @@ func (r *MongoBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *MongoBackupReconciler) secretForMongoBackup(mb *backupv1alpha1.MongoBackup) (*corev1.Secret, error) {
-	conf, err := base64.RawStdEncoding.DecodeString(mb.Spec.RcloneDestination.RcloneConfig)
+	var conf []byte
+	var err error
 
-	if err != nil {
-		return nil, err
+	if mb.Spec.RcloneDestination != nil {
+		conf, err = base64.RawStdEncoding.DecodeString(mb.Spec.RcloneDestination.RcloneConfig)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if mb.Spec.S3Destination != nil {
+		conf = generateRcloneSecret(mb.Spec.S3Destination)
 	}
 
 	se := &corev1.Secret{
@@ -137,6 +153,16 @@ func (r *MongoBackupReconciler) secretForMongoBackup(mb *backupv1alpha1.MongoBac
 func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBackup) *batchv1beta1.CronJob {
 
 	var hLimit int32 = 1
+
+	var path string
+
+	if mb.Spec.RcloneDestination != nil {
+		path = mb.Spec.RcloneDestination.Path
+	}
+
+	if mb.Spec.S3Destination != nil {
+		path = fmt.Sprintf("majo:%s/", mb.Spec.S3Destination.Bucket)
+	}
 
 	cron := &batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
@@ -207,7 +233,7 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 									"/config/rclone.conf",
 									"copy",
 									"/mongodump",
-									mb.Spec.RcloneDestination.Path,
+									path,
 									"-P",
 									"-v",
 								},
@@ -233,4 +259,20 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 	ctrl.SetControllerReference(mb, cron, r.Scheme)
 
 	return cron
+}
+
+func generateRcloneSecret(s3 *backupv1alpha1.S3Destination) []byte {
+	secret := fmt.Sprintf(
+		`[majo]
+type = s3
+provider = Other
+access_key_id = %s
+secret_access_key = %s
+endpoint = %s`,
+		s3.AccessKeyID,
+		s3.SecretAccessKey,
+		s3.Endpoint,
+	)
+
+	return []byte(secret)
 }

@@ -36,6 +36,8 @@ type S3Destination struct {
 	SecretAccessKey string `json:"secretAccessKey"`
 	// Destination bucket to save the backup
 	Bucket string `json:"bucket"`
+	// Endpoint is the s3 endpoint to connect to
+	Endpoint string `json:"endpoint"`
 }
 
 // MongoBackupSpec defines the desired state of MongoBackup
