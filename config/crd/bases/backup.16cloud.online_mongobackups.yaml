@@ -74,7 +74,7 @@ spec:
               s3Destination:
                 description: Destination to save the backup
                 properties:
-                  accesKeyId:
+                  accessKeyId:
                     description: Acces Key ID
                     type: string
                   bucket:
@@ -84,7 +84,7 @@ spec:
                     description: SecretAccessKey to access s3
                     type: string
                 required:
-                - accesKeyId
+                - accessKeyId
                 - bucket
                 - secretAccessKey
                 type: object

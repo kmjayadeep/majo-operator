@@ -31,7 +31,7 @@ type RcloneDestination struct {
 
 type S3Destination struct {
 	// Acces Key ID
-	AccessKeyID string `json:"accesKeyId"`
+	AccessKeyID string `json:"accessKeyId"`
 	// SecretAccessKey to access s3
 	SecretAccessKey string `json:"secretAccessKey"`
 	// Destination bucket to save the backup
