@@ -5,7 +5,7 @@ note: This project is still in it's early stages. Use in production at your own 
 
 ## Example
 
-Automate backups from a mongodb databse to wasabi s3 bucket every hour
+Automate backups from a mongodb database to wasabi s3 bucket every hour
 
 ```
 apiVersion: backup.16cloud.online/v1alpha1
@@ -25,7 +25,7 @@ spec:
 
 ## Example 2
 
-Automate backups from a mongodb databse to a custom location supported by rclone.
+Automate backups from a mongodb database to a custom location supported by rclone.
 We are using rclone (https://rclone.org/) to do copy the backup files to cloud. You can provide your own rclone config to be able to upload to any destination supported by rclone
 
 Check here for the huge list of supported platforms : <https://rclone.org/overview/>
