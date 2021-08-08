@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,6 +41,15 @@ type S3Destination struct {
 	Endpoint string `json:"endpoint"`
 }
 
+type MongoAuth struct {
+	// Username
+	Username string `json:"username"`
+	// Password is the password of mongodb user
+	Password *string `json:"password,omitempty"`
+	// PasswordSecretRef is the secret where password is stored
+	PasswordSecretRef *corev1.SecretKeySelector `json:"passwordSecretRef,omitempty"`
+}
+
 // MongoBackupSpec defines the desired state of MongoBackup
 type MongoBackupSpec struct {
 
@@ -48,6 +58,9 @@ type MongoBackupSpec struct {
 
 	// Mongodb database to take backup from
 	Database string `json:"database"`
+
+	// Auth is the authentication details for mongodb
+	Auth *MongoAuth `json:"auth,omitempty"`
 
 	// The schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.
 	Schedule string `json:"schedule"`

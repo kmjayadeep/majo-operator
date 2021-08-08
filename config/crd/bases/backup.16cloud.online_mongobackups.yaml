@@ -52,6 +52,37 @@ spec:
           spec:
             description: MongoBackupSpec defines the desired state of MongoBackup
             properties:
+              auth:
+                description: Auth is the authentication details for mongodb
+                properties:
+                  password:
+                    description: Password is the password of mongodb user
+                    type: string
+                  passwordSecretRef:
+                    description: PasswordSecretRef is the secret where password is
+                      stored
+                    properties:
+                      key:
+                        description: The key of the secret to select from.  Must be
+                          a valid secret key.
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                        type: string
+                      optional:
+                        description: Specify whether the Secret or its key must be
+                          defined
+                        type: boolean
+                    required:
+                    - key
+                    type: object
+                  username:
+                    description: Username
+                    type: string
+                required:
+                - username
+                type: object
               database:
                 description: Mongodb database to take backup from
                 type: string

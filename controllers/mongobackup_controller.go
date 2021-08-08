@@ -164,6 +164,37 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 		path = fmt.Sprintf("majo:%s/", mb.Spec.S3Destination.Bucket)
 	}
 
+	env := []corev1.EnvVar{
+		{
+			Name:  "DB_NAME",
+			Value: mb.Spec.Database,
+		},
+		{
+			Name:  "DB_HOST",
+			Value: mb.Spec.Host,
+		},
+	}
+
+	cmd := "mongodump -h $DB_HOST -d $DB_NAME -o $DEST --gzip"
+
+	if mb.Spec.Auth != nil {
+		cmd = fmt.Sprintf("mongodump -h $DB_HOST -u %s -p $DB_PASSWORD -d $DB_NAME -o $DEST --gzip", mb.Spec.Auth.Username)
+		if mb.Spec.Auth.Password != nil {
+			env = append(env, corev1.EnvVar{
+				Name:  "DB_PASSWORD",
+				Value: *mb.Spec.Auth.Password,
+			})
+		}
+		if mb.Spec.Auth.PasswordSecretRef != nil {
+			env = append(env, corev1.EnvVar{
+				Name: "DB_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: mb.Spec.Auth.PasswordSecretRef,
+				},
+			})
+		}
+	}
+
 	cron := &batchv1beta1.CronJob{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      mb.Name,
@@ -205,7 +236,7 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 									"echo \"running backup script\";" +
 										"DIR=`date +\"%Y/%m/%d/%Y-%m-%d_%T\"`;" +
 										"DEST=/mongodump/$DIR;" +
-										"mongodump -h $DB_HOST -d $DB_NAME -o $DEST --gzip || { echo 'mongo backup failed' ; exit 1; }",
+										cmd + " || { echo 'mongo backup failed' ; exit 1; }",
 								},
 								Env: []corev1.EnvVar{
 									{
