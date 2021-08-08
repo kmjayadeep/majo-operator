@@ -26,7 +26,8 @@ spec:
 ## Example 2
 
 Automate backups from a mongodb database to a custom location supported by rclone.
-We are using rclone (https://rclone.org/) to do copy the backup files to cloud. You can provide your own rclone config to be able to upload to any destination supported by rclone
+We are using rclone (https://rclone.org/) to do copy the backup files to cloud.
+You can provide your own rclone config to be able to upload to any destination supported by rclone
 
 Check here for the huge list of supported platforms : <https://rclone.org/overview/>
 
@@ -43,3 +44,33 @@ spec:
     rcloneConfig: "<Rclone config in base64>"
     path: "majo:majooperator.test/"
 ```
+
+## Example 3
+
+Automate backups from a protected mongodb database which has password stored in a
+secret
+
+```
+apiVersion: backup.16cloud.online/v1alpha1
+kind: MongoBackup
+metadata:
+  name: majotest
+spec:
+  host: mongo-mongodb
+  database: majo
+  auth:
+    username: root
+    passwordSecretRef:
+      name: mongo-mongodb
+      key: mongodb-root-password
+  schedule: "* * * * *"
+  s3Destination:
+    accessKeyId: somekey
+    secretAccessKey: somesecret
+    bucket: "bucketname"
+    endpoint: s3.wasabisys.com
+```
+
+In the above example, you can specify password in plain text as
+`spec.auth.password` as well. But it is not recommended as they are not
+secure.
