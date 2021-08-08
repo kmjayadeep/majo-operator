@@ -164,7 +164,7 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 		path = fmt.Sprintf("majo:%s/", mb.Spec.S3Destination.Bucket)
 	}
 
-	env := []corev1.EnvVar{
+	initEnv := []corev1.EnvVar{
 		{
 			Name:  "DB_NAME",
 			Value: mb.Spec.Database,
@@ -178,15 +178,15 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 	cmd := "mongodump -h $DB_HOST -d $DB_NAME -o $DEST --gzip"
 
 	if mb.Spec.Auth != nil {
-		cmd = fmt.Sprintf("mongodump -h $DB_HOST -u %s -p $DB_PASSWORD -d $DB_NAME -o $DEST --gzip", mb.Spec.Auth.Username)
+		cmd = fmt.Sprintf("mongodump -h $DB_HOST -u %s -p $DB_PASSWORD --authenticationDatabase admin -d $DB_NAME -o $DEST --gzip", mb.Spec.Auth.Username)
 		if mb.Spec.Auth.Password != nil {
-			env = append(env, corev1.EnvVar{
+			initEnv = append(initEnv, corev1.EnvVar{
 				Name:  "DB_PASSWORD",
 				Value: *mb.Spec.Auth.Password,
 			})
 		}
 		if mb.Spec.Auth.PasswordSecretRef != nil {
-			env = append(env, corev1.EnvVar{
+			initEnv = append(initEnv, corev1.EnvVar{
 				Name: "DB_PASSWORD",
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: mb.Spec.Auth.PasswordSecretRef,
@@ -238,16 +238,7 @@ func (r *MongoBackupReconciler) cronJobForMongoBackup(mb *backupv1alpha1.MongoBa
 										"DEST=/mongodump/$DIR;" +
 										cmd + " || { echo 'mongo backup failed' ; exit 1; }",
 								},
-								Env: []corev1.EnvVar{
-									{
-										Name:  "DB_NAME",
-										Value: mb.Spec.Database,
-									},
-									{
-										Name:  "DB_HOST",
-										Value: mb.Spec.Host,
-									},
-								},
+								Env: initEnv,
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										MountPath: "/mongodump",
