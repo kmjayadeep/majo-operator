@@ -74,3 +74,14 @@ spec:
 In the above example, you can specify password in plain text as
 `spec.auth.password` as well. But it is not recommended as they are not
 secure.
+
+
+# TODO
+
+Here are the list of features planned to implement next
+
+* Support for mysql backups using a new CRD `MysqlBackup`
+* Allow configuring destination credentials as secret refs
+* Custom docker image for backup and restore, which will be more
+  scalable and handle errors better
+* Better validation, security and visibility
